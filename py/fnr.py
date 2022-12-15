@@ -24,7 +24,7 @@ class fnr_class:
     def df(self):
         return self.__df
 
-    # Function that returns all FNR data in one dataframe
+    # Function that returns all FNR data in one DataFrame
     def __setup_class(self, from_year, to_year, aggregations):
         df = self.__get_years(from_year, to_year).drop('varnr', axis=1)
         df = self.__fill_missing_regions(df)
@@ -33,7 +33,7 @@ class fnr_class:
         df_aggregations_with_growth = self.__return_df_with_growth(df_aggregations)
         return df_aggregations_with_growth
 
-    # Function that gets FNR data for a several years
+    # Function that gets FNR data for a several years and puts them in a DataFrame
     def __get_years(self, from_year, to_year):
         df_list = []
         for year in range(from_year, to_year+1):
@@ -41,7 +41,7 @@ class fnr_class:
         df = pd.concat(df_list)
         return df
 
-    # Function that gets FNR data for a single year
+    # Function that gets FNR data for a single year and puts it in a DataFrame
     @staticmethod
     def __get_year(year):
         path = PATH_DATA
@@ -52,7 +52,7 @@ class fnr_class:
         df['årgang'] = pd.Period(value=year, freq='A')
         return df
 
-    # Funciton that ...
+    # Funciton that returns a DataFrame where regions are filled in according to region reform of 2020
     @staticmethod
     def __fill_missing_regions(df):
         df_fill = df.copy(deep=True)
@@ -72,7 +72,7 @@ class fnr_class:
             df_fill['f54'] = np.where(df_fill['f54'].isnull(), df_fill['f19']+df_fill['f20'], df_fill['f54'])
         return df_fill
 
-    # Function that sets df.index to multiindex with year, variable and aggregation
+    # Function that returns a DataFrame with MultiIndex
     @staticmethod
     def __set_aggregations_index(df, aggregations):
         df_index = df.copy(deep=True)
@@ -104,19 +104,20 @@ class fnr_class:
         df_aggregations = pd.concat(df_list)
         return df_aggregations
 
-    # Function that returns dataframe ...
+    # Function that returns dataframe aggregated according to aggregation
     def __return_aggregation_df(self, df, aggregation):
         df_aggregation = df.groupby(['årgang', 'nr_variabler', aggregation], dropna=False).sum(min_count=1)
         df_aggregation['aggregering'] = aggregation.upper()
         df_aggregation = df_aggregation[df_aggregation.index.get_level_values(aggregation).isnull() == False]
         return df_aggregation
 
-    # Function that returns ...
+    # Function that returns dataframe with volume growth rates
     def __return_df_with_growth(self, df):
         df_vr = df[df.index.get_level_values('nr_variabler') == 'BNP'].droplevel('nr_variabler').sort_index()
         df_fp = df[df.index.get_level_values('nr_variabler') == 'BNPF'].droplevel('nr_variabler').sort_index()
         df_vl = (
-            100*(df_fp-df_vr.groupby(['aggregat', 'aggregering']).shift(1))/df_vr.groupby(['aggregat', 'aggregering']).shift(1)
+            100*(df_fp-df_vr.groupby(['aggregat', 'aggregering']).shift(1))
+            .divide(df_vr.groupby(['aggregat', 'aggregering']).shift(1))
             .assign(**{'nr_variabler': 'VLP'})
             .reset_index().set_index(['årgang', 'nr_variabler', 'aggregat', 'aggregering'])
         )
