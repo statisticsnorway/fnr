@@ -4,6 +4,7 @@ import pandas as pd
 
 PATH_DATA = '/ssb/stamme02/nasjregn/fnr_mr2022/wk24/'
 PATH_CATALOGUES = '/ssb/stamme02/nasjregn/systemkataloger_mr2022/kat/'
+VAR_LIST = ['prod', 'pin', 'bnp', 'bnpf', 'brin', 'lkost', 'syss']
 
 
 class fnr_class:
@@ -13,7 +14,7 @@ class fnr_class:
 
     def __init__(self, from_year, to_year, aggregations):
         self.__aggregations = aggregations
-        # Fill in with empty lists and dicts if not supplied
+        # Fills in with empty lists and dicts if not supplied
         if self.__aggregations.get('lists') is None:
             self.__aggregations = {**self.__aggregations, **{'lists': {}}}
         if self.__aggregations.get('mappings') is None:
@@ -46,7 +47,7 @@ class fnr_class:
     def __get_year(year):
         path = PATH_DATA
         df_list = []
-        for var in ['prod', 'pin', 'bnp', 'bnpf', 'brin', 'lkost', 'syss']:
+        for var in VAR_LIST:
             df_list.append(pd.read_sas(''.join([path, '_'.join(['fylke', var, str(year)]), '.sas7bdat']), encoding='iso-8859-1'))
         df = pd.concat(df_list)
         df['årgang'] = pd.Period(value=year, freq='A')
