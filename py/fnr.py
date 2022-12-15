@@ -2,10 +2,18 @@
 import numpy as np
 import pandas as pd
 
+PATH_DATA = '/ssb/stamme02/nasjregn/fnr_mr2022/wk24/'
+PATH_CATALOGUES = '/ssb/stamme02/nasjregn/systemkataloger_mr2022/kat/'
+
 
 class fnr_class:
+    """
+    Docstring TBA
+    """
+
     def __init__(self, from_year, to_year, aggregations):
         self.__aggregations = aggregations
+        # Fill in with empty lists and dicts if not supplied
         if self.__aggregations.get('lists') is None:
             self.__aggregations = {**self.__aggregations, **{'lists': {}}}
         if self.__aggregations.get('mappings') is None:
@@ -36,7 +44,7 @@ class fnr_class:
     # Function that gets FNR data for a single year
     @staticmethod
     def __get_year(year):
-        path = '/ssb/stamme02/nasjregn/fnr_mr2022/wk24/'
+        path = PATH_DATA
         df_list = []
         for var in ['prod', 'pin', 'bnp', 'bnpf', 'brin', 'lkost', 'syss']:
             df_list.append(pd.read_sas(''.join([path, '_'.join(['fylke', var, str(year)]), '.sas7bdat']), encoding='iso-8859-1'))
@@ -77,7 +85,7 @@ class fnr_class:
     # Function that generates mapping from NR-næring to aggregation
     @staticmethod
     def __make_aggregation_mapping(aggregation):
-        path = '/ssb/stamme02/nasjregn/systemkataloger_mr2022/kat/'
+        path = PATH_CATALOGUES
         df = pd.read_sas(''.join([path, 'naering.sas7bdat']), encoding='iso-8859-1')
         return dict(zip(df['naering'], df[aggregation]))
 
