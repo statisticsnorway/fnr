@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 
 DATA = '/ssb/stamme02/nasjregn/fnr_mr2022/wk24/'
-PATH_CATALOGUES = '/ssb/stamme02/nasjregn/systemkataloger_mr2022/kat/'
-VAR_LIST = ['prod', 'pin', 'bnp', 'bnpf', 'brin', 'lkost', 'syss']
+CATALOGUES = '/ssb/stamme02/nasjregn/systemkataloger_mr2022/kat/'
+VARS = ['prod', 'pin', 'bnp', 'bnpf', 'brin', 'lkost', 'syss']
 
 
 class fnr_class:
@@ -40,6 +40,9 @@ class fnr_class:
         for year in range(from_year, to_year+1):
             df_list.append(self.__get_year(year))
         df = pd.concat(df_list)
+        df.columns = [x.lower() for x in df.columns]
+        for col in df.select_dtypes(include=['object']).columns:
+            df[col] = df[col].str.lower()
         return df
 
     # Function that gets FNR data for a single year and puts it in a DataFrame
@@ -50,7 +53,7 @@ class fnr_class:
         for var in VARS:
             df_list.append(pd.read_sas(''.join([path, '_'.join(['fylke', var, str(year)]), '.sas7bdat']), encoding='iso-8859-1'))
         df = pd.concat(df_list)
-        df['årgang'] = pd.Period(value=year, freq='A')
+        df = df.assign(**{'årgang': pd.Period(value=year, freq='A')})
         return df
 
     # Funciton that returns a DataFrame where regions are filled in according to region reform of 2020
@@ -80,7 +83,7 @@ class fnr_class:
         for aggregation in aggregations.get('lists'):
             df_index = df_index.assign(**{aggregation: df['naering'].map(fnr_class.__make_aggregation_mapping(aggregation))})
         for aggregation in aggregations.get('mappings').keys():
-            df_index = df_index.assign(**{aggregation: df['naering'].map({x: aggregation for x in aggregations.get('mappings')[aggregation]})})
+            df_index = df_index.assign(**{aggregation: df['naering'].map({x.lower(): aggregation.lower() for x in aggregations.get('mappings')[aggregation]})})
         return df_index.set_index(['årgang', 'nr_variabler', *aggregations.get('lists'), *aggregations.get('mappings'), 'naering'])
 
     # Function that generates mapping from NR-næring to aggregation
@@ -88,7 +91,7 @@ class fnr_class:
     def __make_aggregation_mapping(aggregation):
         path = CATALOGUES
         df = pd.read_sas(''.join([path, 'naering.sas7bdat']), encoding='iso-8859-1')
-        return dict(zip(df['naering'], df[aggregation]))
+        return dict(zip(df['naering'].str.lower(), df[aggregation].str.lower()))
 
     # Function that returns dataframe for every aggregate in aggregations
     def __make_aggregations_df(self, df, aggregations):
@@ -102,34 +105,53 @@ class fnr_class:
                             .set_index(['årgang', 'nr_variabler',
                                         'aggregat', 'aggregering'])
                           )
-        df_aggregations = pd.concat(df_list)
-        return df_aggregations
+        return pd.concat(df_list)
 
     # Function that returns dataframe aggregated according to aggregation
     def __return_aggregation_df(self, df, aggregation):
         df_aggregation = df.groupby(['årgang', 'nr_variabler', aggregation], dropna=False).sum(min_count=1)
-        df_aggregation['aggregering'] = aggregation.upper()
+        df_aggregation['aggregering'] = aggregation.lower()
         df_aggregation = df_aggregation[df_aggregation.index.get_level_values(aggregation).isnull() == False]
         return df_aggregation
 
     # Function that returns dataframe with volume growth rates
     def __return_df_with_growth(self, df):
-        df_vr = df[df.index.get_level_values('nr_variabler') == 'BNP'].droplevel('nr_variabler').sort_index()
-        df_fp = df[df.index.get_level_values('nr_variabler') == 'BNPF'].droplevel('nr_variabler').sort_index()
+        df_vr = df[df.index.get_level_values('nr_variabler') == 'bnp'].droplevel('nr_variabler').sort_index()
+        df_fp = df[df.index.get_level_values('nr_variabler') == 'bnpf'].droplevel('nr_variabler').sort_index()
         df_vl = (
             100*(df_fp-df_vr.groupby(['aggregat', 'aggregering']).shift(1))
             .divide(df_vr.groupby(['aggregat', 'aggregering']).shift(1))
-            .assign(**{'nr_variabler': 'VLP'})
+            .assign(**{'nr_variabler': 'vlp'})
             .reset_index().set_index(['årgang', 'nr_variabler', 'aggregat', 'aggregering'])
         )
-        df = pd.concat([df, df_vl.reset_index().set_index(['årgang', 'nr_variabler', 'aggregat', 'aggregering'])])
-        return df
+        return pd.concat([df, df_vl.reset_index().set_index(['årgang', 'nr_variabler', 'aggregat', 'aggregering'])])
 
     # Function that returns dataframe ...
-    def return_aggregate(self, aggregate, variable):
-        condition = ((self.df.index.get_level_values('aggregat') == aggregate) & 
-                     (self.df.index.get_level_values('nr_variabler') == variable))
-        return self.df[condition].style.format(decimal=',', precision=2)
+    def return_selection(self, years, variables, aggregation, aggregates, regions, **kwargs):
+        condition = (
+            (self.df.index.get_level_values('årgang').year.isin(years)) &
+            (self.df.index.get_level_values('nr_variabler').isin([x.lower() for x in variables])) &
+            (self.df.index.get_level_values('aggregering') == aggregation.lower()) &
+            (self.df.index.get_level_values('aggregat').isin([x.lower() for x in aggregates]))
+        )
+        df = (
+            self.df[condition][regions]
+            .reset_index()
+            .drop(columns=['aggregering'])
+            .melt(id_vars=['årgang', 'nr_variabler', 'aggregat'], value_vars=regions, var_name='fylke', value_name='verdi')
+            .set_index(['årgang', 'nr_variabler', 'aggregat', 'fylke'])
+        )
+        if 'wide_by' in kwargs.keys():
+            wide_by = kwargs.get('wide_by')
+            df = (
+                df
+                .reset_index()
+                .pivot(index=[x for x in ['årgang', 'nr_variabler', 'aggregat', 'fylke'] if x != wide_by],
+                       columns=[wide_by], values='verdi')
+            )
+        if 'sort_by' in kwargs.keys():
+            df = df.sort_values(kwargs.get('sort_by'))
+        return df.round(2)
 
     def to_statbank():
         pass
