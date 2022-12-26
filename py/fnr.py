@@ -30,7 +30,7 @@ class fnr_class:
     def df(self):
         return self.__df
 
-    # Function that returns all FNR data in one DataFrame in tidy format (long)
+    # Method that returns all FNR data in one DataFrame in tidy format (long)
     @staticmethod
     def __setup_class(from_year, to_year, aggregations):
         df = fnr_class.__get_years(from_year, to_year).drop('varnr', axis=1)
@@ -41,15 +41,16 @@ class fnr_class:
         df_aggregations_with_growth_tidy = fnr_class.__make_tidy_df(df_aggregations_with_growth)
         return df_aggregations_with_growth_tidy
 
-    # Function that gets FNR data for a several years and puts them in a DataFrame
+    # Method that gets FNR data for a several years and puts them in a DataFrame
     @staticmethod
     def __get_years(from_year, to_year):
-        print('Reading data from {}'.format(DATA))
+        print('Reading data from {}\nLoading'.format(DATA), end=' ')
 
         # Store years of data in list of DataFrames
         df_list = []
         for year in range(from_year, to_year+1):
             df_list.append(fnr_class.__get_year(year))
+        print()
 
         # Concatenate (stack) list to single DataFrame
         df = pd.concat(df_list)
@@ -61,10 +62,10 @@ class fnr_class:
 
         return df
 
-    # Function that gets FNR data for a single year and puts it in a DataFrame
+    # Method that gets FNR data for a single year and puts it in a DataFrame
     @staticmethod
     def __get_year(year):
-        print('Loading {}'.format(str(year)))
+        print(str(year), end=' ')
         path = DATA
         df_list = []
         for var in VARS:
@@ -73,7 +74,7 @@ class fnr_class:
         df = df.assign(**{'årgang': pd.Period(value=year, freq='A')})
         return df
 
-    # Funciton that returns a DataFrame where regions are filled in according to region reform of 2018 and 2020
+    # Method that returns a DataFrame where regions are filled in according to region reform of 2018 and 2020
     @staticmethod
     def __fill_missing_regions(df):
         df_fill = df.copy(deep=True)
@@ -93,7 +94,7 @@ class fnr_class:
             df_fill['f54'] = np.where(df_fill['f54'].isnull(), df_fill['f19']+df_fill['f20'], df_fill['f54'])
         return df_fill
 
-    # Function that returns a DataFrame with MultiIndex
+    # Method that returns a DataFrame with MultiIndex
     @staticmethod
     def __set_aggregations_index(df, aggregations):
         df_index = df.copy(deep=True)
@@ -104,14 +105,14 @@ class fnr_class:
             df_index = df_index.assign(**{aggregation: df['naering'].map({x.lower(): aggregation.lower() for x in aggregations.get('mappings')[aggregation]})})
         return df_index.set_index(['årgang', 'nr_variabler', *aggregations.get('lists'), *aggregations.get('mappings'), 'naering'])
 
-    # Function that generates mapping from NR-næring to aggregation
+    # Method that generates mapping from NR-næring to aggregation
     @staticmethod
     def __make_aggregation_mapping(aggregation):
         path = CATALOGUES
         df = pd.read_sas(''.join([path, 'naering.sas7bdat']), encoding='iso-8859-1')
         return dict(zip(df['naering'].str.lower(), df[aggregation].str.lower()))
 
-    # Function that returns DataFrame for every aggregate in aggregations
+    # Method that returns DataFrame for every aggregate in aggregations
     @staticmethod
     def __make_aggregations_df(df, aggregations):
         print('Generating aggregated DataFrame')
@@ -129,7 +130,7 @@ class fnr_class:
                           )
         return pd.concat(df_list)
 
-    # Function that returns DataFrame aggregated according to aggregation
+    # Method that returns DataFrame aggregated according to aggregation
     @staticmethod
     def __return_aggregation_df(df, aggregation):
         df_aggregation = df.groupby(['årgang', 'nr_variabler', aggregation], dropna=False).sum(min_count=1)
@@ -137,7 +138,7 @@ class fnr_class:
         df_aggregation = df_aggregation[df_aggregation.index.get_level_values(aggregation).isnull() == False]
         return df_aggregation
 
-    # Function that returns DataFrame with volume growth rates
+    # Method that returns DataFrame with volume growth rates
     @staticmethod
     def __return_df_with_growth(df):
         print('Generating volume growth')
@@ -151,6 +152,7 @@ class fnr_class:
         )
         return pd.concat([df, df_vl.reset_index().set_index(['årgang', 'nr_variabler', 'aggregering', 'aggregat'])])
 
+    # Method that takes wide DataFrame and transposes it to long (tidy format)
     @staticmethod
     def __make_tidy_df(df):
         df_tidy = (
@@ -162,19 +164,60 @@ class fnr_class:
         )
         return df_tidy
 
-    # Function that returns a style opbject with selecte variables
+    # Method that adds data to class DataFrame
+    def add_data(self, from_year, to_year):
+        df = fnr_class.__get_years(from_year, to_year).drop('varnr', axis=1)
+        df = fnr_class.__fill_missing_regions(df)
+        df = fnr_class.__set_aggregations_index(df, self.aggregations)
+        df_aggregations = fnr_class.__make_aggregations_df(df, self.aggregations)
+        df_aggregations_with_growth = fnr_class.__return_df_with_growth(df_aggregations)
+        df_aggregations_with_growth_tidy = fnr_class.__make_tidy_df(df_aggregations_with_growth)
+        print(df_aggregations_with_growth_tidy)
+
+    # Method that returns a style opbject with selecte variables
     def return_selection(self, years: list, variables: list, aggregation: str, aggregates: list, regions: list, **kwargs) -> pd.DataFrame.style:
         """
         Method that returns a style object for selected years, variables, aggregation, aggregate and regions.
         Optional arguments (**kwargs) are:
-        * wide_by: transpose to wide by selected variable
-        * sort_by: sort by selected variable or variables
-        * round_to: round values to chosen number of decimals
+            * wide_by: transpose to wide by selected variable
+            * sort_by: sort by selected variable or variables
+            * round_to: round values to chosen number of decimals
 
         Example of use:
-        * fnr.return_selection([2019,2020], ['bnp'], 'pubagg', ['2x35', '2x41_43'], ['f30', 'f03', 'f34'], wide_by='fylke', round_to=2)
-        * fnr.return_selection([2018,2019,2020], ['vlp'], 'naering', ['23720'], ['f30', 'f03', 'f34'], sort_by=['årgang', 'nr_variabler'])
+            * fnr.return_selection([2019,2020], ['bnp'], 'pubagg', ['2x35', '2x41_43'], ['f30', 'f03', 'f34'], wide_by='fylke', round_to=2)
+            * fnr.return_selection([2018,2019,2020], ['vlp'], 'naering', ['23720'], ['f30', 'f03', 'f34'], sort_by=['årgang', 'nr_variabler'])
+
+        DataFrame underlying style object may be retrieved using return_selevtion().data
         """
+
+        # If years, aggregates or regions is None select all
+        if years is None:
+            years = (
+                self.df
+                .index
+                .get_level_values('årgang')
+                .year
+                .unique()
+                .to_list()
+            )
+        if aggregates is None:
+            aggregates = (
+                self.df[self.df.index.get_level_values('aggregering') == aggregation]
+                .index
+                .get_level_values('aggregat')
+                .unique()
+                .to_list()
+            )
+        if regions is None:
+            regions = (
+                self.df
+                .index
+                .get_level_values('fylke')
+                .unique()
+                .to_list()
+            )
+
+        # Make DataFrame thats satisfies condition
         condition = (
             (self.df.index.get_level_values('årgang').year.isin(years)) &
             (self.df.index.get_level_values('nr_variabler').isin([x.lower() for x in variables])) &
@@ -182,7 +225,6 @@ class fnr_class:
             (self.df.index.get_level_values('aggregat').isin([x.lower() for x in aggregates])) & 
             (self.df.index.get_level_values('fylke').isin([x.lower() for x in regions]))
         )
-
         df = self.df[condition]
 
         # Reshape DataFrame to wide by chosen variable, if any
@@ -210,5 +252,10 @@ class fnr_class:
         else:
             return df.style
 
+    # Method that ...
+    def supress_data():
+        pass
+
+    # Method that ...
     def to_statbank():
         pass
