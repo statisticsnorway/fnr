@@ -18,7 +18,7 @@ class fnr_class:
     def __init__(self, from_year, to_year, aggregations, regions, data, catalogues):
         # Check that paths to data and catalogues exist, the latter only if used
         if os.path.exists(data) is False:
-            raise FileNotFoundError('Path {} does not exist'.format(path))
+            raise FileNotFoundError('Path {} does not exist'.format(data))
         if os.path.exists(catalogues) is False and aggregations.get('lists') is not None:
             raise FileNotFoundError('Path {} does not exist'.format(catalogues))
 
@@ -106,6 +106,7 @@ class fnr_class:
         df_list = []
         for year in range(from_year, to_year+1):
             df_list.append(self.__get_year(year))
+
         print()
 
         # Concatenate (stack) list to single DataFrame
@@ -195,7 +196,7 @@ class fnr_class:
     # Method that returns DataFrame aggregated according to aggregation
     def __return_aggregation_df(self, df, aggregation):
         df_aggregation = df.groupby(['årgang', 'nr_variabler', aggregation], dropna=False).sum(min_count=1)
-        df_aggregation['aggregering'] = aggregation.lower()
+        df_aggregation = df_aggregation.assign(**{'aggregering': aggregation.lower()})
         df_aggregation = df_aggregation[df_aggregation.index.get_level_values(aggregation).isnull() == False]
 
         return df_aggregation
