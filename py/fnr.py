@@ -18,9 +18,9 @@ class fnr_class:
     def __init__(self, from_year, to_year, aggregations, regions, data, catalogues):
         # Check that paths to data and catalogues exist, the latter only if used
         if os.path.exists(data) is False:
-            raise FileNotFoundError('Path {} does not exist'.format(data))
+            raise IOError('Path {} does not exist'.format(data))
         if os.path.exists(catalogues) is False and aggregations.get('lists') is not None:
-            raise FileNotFoundError('Path {} does not exist'.format(catalogues))
+            raise IOError('Path {} does not exist'.format(catalogues))
 
         # Setting up instance variables
         self.__from_year = from_year
@@ -73,14 +73,14 @@ class fnr_class:
         if os.path.exists(path):
             self.__data = path
         else:
-            raise FileNotFoundError('Path {} does not exist'.format(path))
+            raise IOError('Path {} does not exist'.format(path))
 
     @catalogues.setter
     def catalogues(self, path):
         if os.path.exists(path):
             self.__data = path
         else:
-            raise FileNotFoundError('Path {} does not exist'.format(path))
+            raise IOError('Path {} does not exist'.format(path))
 
     # Method that returns all FNR data in one DataFrame in tidy format (long)
     def __setup_class(self, from_year, to_year, aggregations):
