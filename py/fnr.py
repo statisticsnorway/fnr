@@ -12,7 +12,23 @@ VARIABLES = ['prod', 'pin', 'bnp', 'bnpf', 'brin', 'lkost', 'syss']
 
 class fnr_class:
     """
-    Docstring TBA
+    Class that loads and stores data for the Regional accounts (RA).
+    The class reads SAS-datasets (sas7bdat-files) containing data and a catalogue containing aggregations.
+    It aggregates all the data according to user input and calculates colume growth rates.
+    The class contains methods to effortlessly display data in a user friendly format.
+
+    An instance (fnr) of the class is set up using
+        * fnr = fnr_class(year_from, year_to, aggregations, regions, data_path, catalogue_path)
+
+    where
+        * aggregations is a dict containing the keys 'lists' and/or 'mappings' (or neither), where
+            - 'lists' contains a list of aggregations in the catalogue to aggregated over
+            - 'mappings contains a dict where each key contains some aggregation
+        * regions is a list of regions
+        * data_path is the path to the SAS datasets containing the data
+        * catalogue_path is the path to the SAS datasets containing the catalogue
+
+    Example of aggregations dict: {'list': ['a38np', 'pubagg'], 'mappings': {'23ind': ['23101', '23102', '23103', '23104',...]}}
     """
 
     def __init__(self, from_year, to_year, aggregations, regions, data_path, catalogue_path):
@@ -26,7 +42,7 @@ class fnr_class:
         if os.path.exists(catalogue_path) is False and aggregations.get('lists') is not None:
             raise IOError('Path {} does not exist'.format(catalogue_path))
 
-        # Setting up instance variables
+        # Set up instance variables
         self.__year_from = from_year
         self.__year_to = to_year
         self.__aggregations = aggregations
@@ -264,7 +280,7 @@ class fnr_class:
                          variables=None, aggregates=None,
                          regions=None, **kwargs) -> pd.DataFrame.style:
         """
-        Method that returns a style object for selected aggregation, year(s), variable(s), aggregate(s), and region(s)
+        Method that returns a style object for selected aggregation, year(s), variable(s), aggregate(s), and region(s).
         Optional arguments (**kwargs) are:
             * wide_by: transpose to wide by selected variable
             * columns: list according to which columns will be sorted
