@@ -15,20 +15,24 @@ class fnr_class:
     Docstring TBA
     """
 
-    def __init__(self, from_year, to_year, aggregations, regions, data, catalogues):
+    def __init__(self, from_year, to_year, aggregations, regions, data_path, catalogue_path):
         # Check that paths to data and catalogues exist, the latter only if used
-        if os.path.exists(data) is False:
-            raise IOError('Path {} does not exist'.format(data))
-        if os.path.exists(catalogues) is False and aggregations.get('lists') is not None:
-            raise IOError('Path {} does not exist'.format(catalogues))
+        if isinstance(data_path, str) is False:
+            raise IOError('Data path must be string')
+        if os.path.exists(data_path) is False:
+            raise IOError('Path {} does not exist'.format(data_path))
+        if isinstance(catalogue_path, str) is False and aggregations.get('lists') is not None:
+            raise IOError('Catalogue path must be string')
+        if os.path.exists(catalogue_path) is False and aggregations.get('lists') is not None:
+            raise IOError('Path {} does not exist'.format(catalogue_path))
 
         # Setting up instance variables
-        self.__from_year = from_year
-        self.__to_year = to_year
+        self.__year_from = from_year
+        self.__year_to = to_year
         self.__aggregations = aggregations
         self.__regions = [x.lower() for x in regions if x.lower() != 'hele_landet']
-        self.__data = data
-        self.__catalogues = catalogues
+        self.__data_path = data_path
+        self.__catalogue_path = catalogue_path
         self.__variables = VARIABLES
 
         # Fill in empty lists and dicts if not supplied by user
@@ -38,27 +42,27 @@ class fnr_class:
             self.__aggregations = {**self.__aggregations, **{'mappings': {}}}
 
         # Run setup method and store data as private DataFrame
-        self.__df = self.__setup_class(self.__from_year, self.__to_year, self.__aggregations)
+        self.__df = self.__setup_class(self.__year_from, self.__year_to, self.__aggregations)
 
     @property
-    def from_year(self):
-        return self.__from_year
+    def year_from(self):
+        return self.__year_from
 
     @property
-    def to_year(self):
-        return self.__to_year
+    def year_to(self):
+        return self.__year_to
 
     @property
     def regions(self):
         return self.__regions
 
     @property
-    def data(self):
-        return self.__data
+    def data_path(self):
+        return self.__data_path
 
     @property
-    def catalogues(self):
-        return self.__catalogues
+    def catalogue_path(self):
+        return self.__catalogue_path
 
     @property
     def df(self):
@@ -68,26 +72,30 @@ class fnr_class:
     def regions(self, regions):
         self.__regions = regions
 
-    @data.setter
-    def data(self, path):
+    @data_path.setter
+    def data_path(self, path):
+        if isinstance(path, str) is False:
+            raise IOError('Path must be string')
         if os.path.exists(path):
-            self.__data = path
+            self.__data_path = path
         else:
             raise IOError('Path {} does not exist'.format(path))
 
-    @catalogues.setter
-    def catalogues(self, path):
+    @catalogue_path.setter
+    def catalogue_path(self, path):
+        if isinstance(path, str) is False:
+            raise IOError('Path must be string')
         if os.path.exists(path):
-            self.__data = path
+            self.__data_path = path
         else:
             raise IOError('Path {} does not exist'.format(path))
 
     # Method that returns all FNR data in one DataFrame in tidy format (long)
-    def __setup_class(self, from_year, to_year, aggregations):
+    def __setup_class(self, year_from, year_to, aggregations):
         print('Setting up class instance')
 
         # Getting data, concatenating, aggregating etc.
-        df = self.__get_years(from_year, to_year).drop('varnr', axis=1)
+        df = self.__get_years(year_from, year_to).drop('varnr', axis=1)
         df = self.__fill_missing_regions(df)
         df = self.__set_aggregations_index(df, aggregations)
         df_aggregations = self.__make_aggregations_df(df, aggregations)
@@ -99,12 +107,12 @@ class fnr_class:
         return df_aggregations_with_growth_tidy
 
     # Method that gets FNR data for a several years and puts them in a DataFrame
-    def __get_years(self, from_year, to_year):
-        print('Reading data from {}\nLoading'.format(self.__data), end=' ')
+    def __get_years(self, year_from, year_to):
+        print('Reading data from {}\nLoading'.format(self.__data_path), end=' ')
 
         # Store years of data in list of DataFrames
         df_list = []
-        for year in range(from_year, to_year+1):
+        for year in range(year_from, year_to+1):
             df_list.append(self.__get_year(year))
 
         print()
@@ -125,7 +133,7 @@ class fnr_class:
 
         df_list = []
         for var in self.__variables:
-            df_list.append(pd.read_sas(''.join([self.__data, '_'.join(['fylke', var, str(year)]), '.sas7bdat']), encoding='iso-8859-1'))
+            df_list.append(pd.read_sas(''.join([self.__data_path, '_'.join(['fylke', var, str(year)]), '.sas7bdat']), encoding='iso-8859-1'))
 
         df = pd.concat(df_list)
         df = df.assign(**{'årgang': pd.Period(value=year, freq='A')})
@@ -171,7 +179,7 @@ class fnr_class:
 
     # Method that generates mapping from NR-næring to aggregation
     def __make_aggregation_mapping(self, aggregation):
-        df = pd.read_sas(''.join([self.__catalogues, 'naering.sas7bdat']), encoding='iso-8859-1')
+        df = pd.read_sas(''.join([self.__catalogue_path, 'naering.sas7bdat']), encoding='iso-8859-1')
 
         return dict(zip(df['naering'].str.lower(), df[aggregation].str.lower()))
 
@@ -233,7 +241,7 @@ class fnr_class:
     def add_year(self, year):
         print('Adding year to class instance')
 
-        if year == self.__to_year+1:
+        if year == self.__year_to+1:
             # Getting data, concatenating, aggregating etc.
             df = self.__get_years(year, year).drop('varnr', axis=1)
             df = self.__fill_missing_regions(df)
@@ -244,7 +252,7 @@ class fnr_class:
 
             # Storing new data to DataFrame and updating to_year
             self.__df = pd.concat([self.__df, df_aggregations_with_growth_tidy])
-            self.__to_year = year
+            self.__year_to = year
 
             print('Ready')
         else:
@@ -256,18 +264,18 @@ class fnr_class:
                          variables=None, aggregates=None,
                          regions=None, **kwargs) -> pd.DataFrame.style:
         """
-        Method that returns a style object for selected years, variables, aggregation, aggregate and regions.
+        Method that returns a style object for selected aggregation, year(s), variable(s), aggregate(s), and region(s)
         Optional arguments (**kwargs) are:
             * wide_by: transpose to wide by selected variable
             * columns: list according to which columns will be sorted
             * sort_by: sort by selected variable or variables
             * round_to: round values to chosen number of decimals
 
-        Example of use:
-            * fnr.return_selection([2019,2020], ['bnp'], 'pubagg', ['2x35', '2x41_43'], ['f30', 'f03', 'f34'], wide_by='fylke', round_to=2)
-            * fnr.return_selection([2018,2019,2020], ['vlp'], 'naering', ['23720'], ['f30', 'f03', 'f34'], sort_by=['årgang', 'nr_variabler'])
+        Example of use (assuming there's an class instance called 'fnr':
+            * fnr.return_selection('pubagg', [2019,2020], ['bnp'], ['2x35', '2x41_43'], ['f30', 'f03', 'f34'], wide_by='fylke', round_to=2)
+            * fnr.return_selection('naering', [2018,2019,2020], ['vlp'], ['23720'], ['f30', 'f03', 'f34'], sort_by=['årgang', 'nr_variabler'])
 
-        The DataFrame underlying style object may be retreived using return_selevtion().data
+        The DataFrame underlying the style object may be retreived using return_selection().data (that is appending the statement 'data')
         """
 
         # Select all if years, aggregates or regions is None or empty list
