@@ -339,7 +339,18 @@ class fnr_class:
             (self.__df.index.get_level_values('fylke').isin([x.lower() for x in regions]))
         )
 
-        df = self.__df[condition]
+        # Make first differences if chosen by user, otherwise not
+        if 'first_diff' in kwargs.keys():
+            if kwargs.get('first_diff'):
+                df = (
+                    self.__df
+                    .groupby(['nr_variabler', 'aggregering', 'aggregat', 'fylke'])
+                    .diff(1)
+                )[condition]
+            else:
+                df = self.__df[condition]
+        else:
+            df = self.__df[condition]
 
         # Reshape DataFrame to wide by chosen variable, if any
         if 'wide_by' in kwargs.keys():
