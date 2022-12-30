@@ -58,7 +58,7 @@ class fnr_class:
             self.__aggregations = {**self.__aggregations, **{'mappings': {}}}
 
         # Run setup method and store data as private DataFrame
-        self.__df = self.__setup_class(self.__year_from, self.__year_to, self.__aggregations)
+        self.__df_untidy, self.__df = self.__setup_class(self.__year_from, self.__year_to, self.__aggregations)
 
     @property
     def year_from(self):
@@ -120,7 +120,7 @@ class fnr_class:
 
         print('Ready')
 
-        return df_aggregations_with_growth_tidy
+        return df_aggregations_with_growth, df_aggregations_with_growth_tidy
 
     # Method that gets FNR data for a several years and puts them in a DataFrame
     def __get_years(self, year_from, year_to):
@@ -263,17 +263,18 @@ class fnr_class:
             df = self.__fill_missing_regions(df)
             df = self.__set_aggregations_index(df, self.__aggregations)
             df_aggregations = self.__make_aggregations_df(df, self.__aggregations)
+            df_aggregations = pd.concat([self.__df_untidy[self.__df_untidy.index.get_level_values('nr_variabler') != 'vlp'], df_aggregations])
             df_aggregations_with_growth = self.__return_df_with_growth(df_aggregations)
             df_aggregations_with_growth_tidy = self.__make_tidy_df(df_aggregations_with_growth)
 
             # Storing new data to DataFrame and updating to_year
-            self.__df = pd.concat([self.__df, df_aggregations_with_growth_tidy])
+            self.__df = df_aggregations_with_growth_tidy
             self.__year_to = year
 
             print('Ready')
         else:
             warnings.warn('Cannot add year {} when to_year is {}'
-                          .format(str(year), str(self.to_year)))
+                          .format(str(year), str(self.year_to)))
 
     # Method that returns a style opbject with selecte variables
     def return_selection(self, aggregation: str, years=None,
