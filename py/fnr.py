@@ -266,7 +266,7 @@ class fnr_class:
             df_aggregations = self.__make_aggregations_df(df, self.__aggregations)
             df_aggregations = pd.concat([self.__df_untidy[self.__df_untidy.index.get_level_values('nr_variabler') != 'vlp'], df_aggregations])
             df_aggregations_with_growth = self.__return_df_with_growth(df_aggregations)
-            df_aggregations_with_growth = df_aggregations_with_growth[df_aggregations_with_growth.index.get_level_values('årgang').year==year]
+            df_aggregations_with_growth = df_aggregations_with_growth[df_aggregations_with_growth.index.get_level_values('årgang').year == year]
             df_aggregations_with_growth_tidy = self.__make_tidy_df(df_aggregations_with_growth)
 
             # Storing new data to DataFrame and updating to_year
