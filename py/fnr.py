@@ -249,6 +249,7 @@ class fnr_class:
             .melt(id_vars=['årgang', 'nr_variabler', 'aggregering', 'aggregat'],
                   var_name='fylke', value_name='verdi')
             .set_index(['årgang', 'nr_variabler', 'aggregering', 'aggregat', 'fylke'])
+            .assign(**{'prikke': False})
         )
 
         return df_tidy
@@ -265,10 +266,11 @@ class fnr_class:
             df_aggregations = self.__make_aggregations_df(df, self.__aggregations)
             df_aggregations = pd.concat([self.__df_untidy[self.__df_untidy.index.get_level_values('nr_variabler') != 'vlp'], df_aggregations])
             df_aggregations_with_growth = self.__return_df_with_growth(df_aggregations)
+            df_aggregations_with_growth = df_aggregations_with_growth[df_aggregations_with_growth.index.get_level_values('årgang').year==year]
             df_aggregations_with_growth_tidy = self.__make_tidy_df(df_aggregations_with_growth)
 
             # Storing new data to DataFrame and updating to_year
-            self.__df = df_aggregations_with_growth_tidy
+            self.__df = pd.concat([self.__df, df_aggregations_with_growth_tidy])
             self.__year_to = year
 
             print('Ready')
@@ -381,9 +383,20 @@ class fnr_class:
         else:
             return df.style
 
-    # Method that ...
-    def supress_data():
-        pass
+    # Method that suppresses data according to dict {year: [[aggreagte, region]]
+    def suppress_data(self, to_be_suppressed):
+        df = self.__df.copy(deep=True)
+
+        for year in to_be_suppressed.keys():
+            for [aggregate, region] in to_be_suppressed.get(year):
+                df = df.assign(**{'prikke': lambda x: (
+                    (x.index.get_level_values('årgang').year == year) &
+                    (x.index.get_level_values('aggregat') == aggregate.lower()) &
+                    (x.index.get_level_values('fylke') == region.lower()) |
+                    (x['prikke'])
+                )})
+
+        self.__df = df
 
     # Method that ...
     def to_statbank():
