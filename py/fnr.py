@@ -289,6 +289,8 @@ class fnr_class:
             * columns: list according to which columns will be sorted
             * sort_by: sort by selected variable or variables
             * round_to: round values to chosen number of decimals
+            * first_diff: calculate first differences False/True
+            * suppress: show NaN for suppressed observations False/True
 
         Example of use (assuming there's an class instance called 'fnr':
             * fnr.return_selection('pubagg', [2019,2020], ['bnp'], ['2x35', '2x41_43'], ['f30', 'f03', 'f34'], wide_by='fylke', round_to=2)
@@ -342,24 +344,18 @@ class fnr_class:
         )
 
         # Suppress data (set to NaN) if chosen by user
-        if 'suppress' in kwargs.keys():
-            if kwargs.get('suppress'):
-                df = self.__df.assign(**{'verdi': lambda df: [x if y is False else np.nan for x, y in zip(df['verdi'], df['prikke'])]})[['verdi']]
-            else:
-                df = self.__df[['verdi']]
+        if kwargs.get('suppress') is True:
+            df = self.__df.assign(**{'verdi': lambda df: [x if y is False else np.nan for x, y in zip(df['verdi'], df['prikke'])]})[['verdi']]
         else:
             df = self.__df[['verdi']]
 
         # Return first differences if chosen by user
-        if 'first_diff' in kwargs.keys():
-            if kwargs.get('first_diff'):
-                df = (
-                    df
-                    .groupby(['nr_variabler', 'aggregering', 'aggregat', 'fylke'])
-                    .diff(1)
-                )[condition]
-            else:
-                df = df[condition]
+        if kwargs.get('first_diff') is True:
+            df = (
+                df
+                .groupby(['nr_variabler', 'aggregering', 'aggregat', 'fylke'])
+                .diff(1)
+            )[condition]
         else:
             df = df[condition]
 
