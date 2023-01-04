@@ -341,18 +341,27 @@ class fnr_class:
             (self.__df.index.get_level_values('fylke').isin([x.lower() for x in regions]))
         )
 
-        # Make first differences if chosen by user, otherwise not
+        # Suppress data (set to NaN) if chosen by user
+        if 'suppress' in kwargs.keys():
+            if kwargs.get('suppress'):
+                df = self.__df.assign(**{'verdi': lambda df: [x if y is False else np.nan for x, y in zip(df['verdi'], df['prikke'])]})[['verdi']]
+            else:
+                df = self.__df[['verdi']]
+        else:
+            df = self.__df[['verdi']]
+
+        # Return first differences if chosen by user
         if 'first_diff' in kwargs.keys():
             if kwargs.get('first_diff'):
                 df = (
-                    self.__df
+                    df
                     .groupby(['nr_variabler', 'aggregering', 'aggregat', 'fylke'])
                     .diff(1)
                 )[condition]
             else:
-                df = self.__df[condition]
+                df = df[condition]
         else:
-            df = self.__df[condition]
+            df = df[condition]
 
         # Reshape DataFrame to wide by chosen variable, if any
         if 'wide_by' in kwargs.keys():
