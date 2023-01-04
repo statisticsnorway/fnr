@@ -396,13 +396,14 @@ class fnr_class:
     def suppress_data(self, to_be_suppressed):
         df = self.__df.copy(deep=True)
 
+        # Loop over keys (years) and lists ([aggreagte, region]) and set 'prikke' to True
         for year in to_be_suppressed.keys():
             for [aggregate, region] in to_be_suppressed.get(year):
-                df = df.assign(**{'prikke': lambda x: (
-                    (x.index.get_level_values('årgang').year == year) &
-                    (x.index.get_level_values('aggregat') == aggregate.lower()) &
-                    (x.index.get_level_values('fylke') == region.lower()) |
-                    (x['prikke'])
+                df = df.assign(**{'prikke': lambda df: (
+                    (df.index.get_level_values('årgang').year == year) &
+                    (df.index.get_level_values('aggregat') == aggregate.lower()) &
+                    (df.index.get_level_values('fylke') == region.lower()) |
+                    (df['prikke'])
                 )})
 
         self.__df = df
