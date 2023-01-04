@@ -136,7 +136,7 @@ class fnr_class:
         # Concatenate (stack) list to single DataFrame
         df = pd.concat(df_list)
 
-        # Set all variable names and object type variables to lowecase
+        # Set all variable names and object type variables to lowercase
         df.columns = [x.lower() for x in df.columns]
         for col in df.select_dtypes(include=['object']).columns:
             df = df.assign(**{col: lambda df: df[col].str.lower()})
