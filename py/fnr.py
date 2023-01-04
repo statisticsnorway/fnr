@@ -139,7 +139,7 @@ class fnr_class:
         # Set all variable names and object type variables to lowecase
         df.columns = [x.lower() for x in df.columns]
         for col in df.select_dtypes(include=['object']).columns:
-            df[col] = df[col].str.lower()
+            df = df.assign(**{col: lambda df: df[col].str.lower()})
 
         return df
 
