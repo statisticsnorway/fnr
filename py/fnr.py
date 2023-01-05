@@ -185,11 +185,17 @@ class fnr_class:
 
         df_index = df.copy(deep=True)
 
+        # Make variables mapping from naering to aggregations in lists
         for aggregation in aggregations.get('lists'):
-            df_index = df_index.assign(**{aggregation: df['naering'].map(self.__make_aggregation_mapping(aggregation))})
+            df_index = df_index.assign(**{aggregation: df['naering'].map(
+                self.__make_aggregation_mapping(aggregation)
+            )})
 
+        # Make variables mapping from naering to aggregations in mappings
         for aggregation in aggregations.get('mappings').keys():
-            df_index = df_index.assign(**{aggregation: df['naering'].map({x.lower(): aggregation.lower() for x in aggregations.get('mappings')[aggregation]})})
+            df_index = df_index.assign(**{aggregation: df['naering'].map(
+                {x.lower(): aggregation.lower() for x in aggregations.get('mappings').get(aggregation)}
+            )})
 
         return df_index.set_index(['årgang', 'nr_variabler', *aggregations.get('lists'), *aggregations.get('mappings'), 'naering'])
 
@@ -390,6 +396,13 @@ class fnr_class:
 
     # Method that suppresses data according to dict {year: [[aggreagte, region]]
     def suppress_data(self, to_be_suppressed):
+        """
+        Method that suppresses data according to dict with years as keys and list/tuple of lists/tuples with [aggregate, region]'s to be suppressed.
+
+        Example of use (assuming there's an class instance called 'fnr':
+            * fnr.suppress_data({2019: [['2x90_97', 'f54'], ['2x85', 'f30']], 2020: [['2x90_97', 'f54'], ['2x85', 'f30']]})
+        """
+
         df = self.__df.copy(deep=True)
 
         # Loop over keys (years) and lists ([aggreagte, region]) and set 'prikke' to True
@@ -407,3 +420,20 @@ class fnr_class:
     # Method that ...
     def to_statbank():
         pass
+
+    # Recursive function that flattens arbitrarily nested in_list
+    @staticmethod
+    def flatten_list(in_list):
+        if isinstance(in_list, list) is False:
+            raise ValueError('Input must be list')
+
+        outer_list = []
+        for x in in_list:
+            inner_list = []
+            if isinstance(x, list):
+                inner_list.extend(flatten(x))
+            else:
+                inner_list.append(x)
+            outer_list.extend(inner_list)
+
+        return outer_list
