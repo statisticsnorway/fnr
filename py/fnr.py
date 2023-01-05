@@ -305,8 +305,14 @@ class fnr_class:
         The DataFrame underlying the style object may be retreived using return_selection().data (that is appending the statement 'data')
         """
 
+        # Comment TBA
+        years = fnr_class.__flatten_list([years])
+        variables = fnr_class.__flatten_list([variables])
+        aggregates = fnr_class.__flatten_list([aggregates])
+        regions = fnr_class.__flatten_list([regions])
+
         # Select all if years, aggregates or regions is None or empty list
-        if years in (None, []):
+        if years in ([None], []):
             years = (
                 self.__df
                 .index
@@ -315,7 +321,7 @@ class fnr_class:
                 .unique()
                 .to_list()
             )
-        if variables in (None, []):
+        if variables in ([None], []):
             variables = (
                 self.__df
                 .index
@@ -323,7 +329,7 @@ class fnr_class:
                 .unique()
                 .to_list()
             )
-        if aggregates in (None, []):
+        if aggregates in ([None], []):
             aggregates = (
                 self.__df[self.df.index.get_level_values('aggregering') == aggregation]
                 .index
@@ -331,7 +337,7 @@ class fnr_class:
                 .unique()
                 .to_list()
             )
-        if regions in (None, []):
+        if regions in ([None], []):
             regions = ['hele_landet']+(
                 self.__df
                 .index
@@ -423,15 +429,15 @@ class fnr_class:
 
     # Recursive function that flattens arbitrarily nested in_list
     @staticmethod
-    def flatten_list(in_list):
-        if isinstance(in_list, list) is False:
+    def __flatten_list(in_list):
+        if (isinstance(in_list, list) or isinstance(in_list, tuple)) is False:
             raise ValueError('Input must be list')
 
         outer_list = []
         for x in in_list:
             inner_list = []
-            if isinstance(x, list):
-                inner_list.extend(flatten(x))
+            if isinstance(x, list) or isinstance(x, tuple):
+                inner_list.extend(fnr_class.__flatten_list(x))
             else:
                 inner_list.append(x)
             outer_list.extend(inner_list)
