@@ -162,20 +162,13 @@ class fnr_class:
         df_fill = pd.concat([df.copy(deep=True), pd.DataFrame(columns=['hele_landet']+self.__regions, dtype=np.float64)])
 
         # Fill in regions according to regional reform of 2018 and 2020
-        if 'f30' in df_fill.columns:
-            df_fill['f30'] = np.where(df_fill['f30'].isnull(), df_fill['f01']+df_fill['f02']+df_fill['f06'], df_fill['f30'])
-        if 'f34' in df_fill.columns:
-            df_fill['f34'] = np.where(df_fill['f34'].isnull(), df_fill['f04']+df_fill['f05'], df_fill['f34'])
-        if 'f38' in df_fill.columns:
-            df_fill['f38'] = np.where(df_fill['f38'].isnull(), df_fill['f07']+df_fill['f08'], df_fill['f38'])
-        if 'f42' in df_fill.columns:
-            df_fill['f42'] = np.where(df_fill['f42'].isnull(), df_fill['f09']+df_fill['f10'], df_fill['f42'])
-        if 'f46' in df_fill.columns:
-            df_fill['f46'] = np.where(df_fill['f46'].isnull(), df_fill['f12']+df_fill['f14'], df_fill['f46'])
-        if 'f50' in df_fill.columns:
-            df_fill['f50'] = np.where(df_fill['f50'].isnull(), df_fill['f16']+df_fill['f17'], df_fill['f50'])
-        if 'f54' in df_fill.columns:
-            df_fill['f54'] = np.where(df_fill['f54'].isnull(), df_fill['f19']+df_fill['f20'], df_fill['f54'])
+        df_fill = df_fill.assign(**{'f30': np.where(df_fill['f30'].isnull(), df_fill['f01']+df_fill['f02']+df_fill['f06'], df_fill['f30'])})
+        df_fill = df_fill.assign(**{'f34': np.where(df_fill['f34'].isnull(), df_fill['f04']+df_fill['f05'], df_fill['f34'])})
+        df_fill = df_fill.assign(**{'f38': np.where(df_fill['f38'].isnull(), df_fill['f07']+df_fill['f08'], df_fill['f38'])})
+        df_fill = df_fill.assign(**{'f42': np.where(df_fill['f42'].isnull(), df_fill['f09']+df_fill['f10'], df_fill['f42'])})
+        df_fill = df_fill.assign(**{'f46': np.where(df_fill['f46'].isnull(), df_fill['f12']+df_fill['f14'], df_fill['f46'])})
+        df_fill = df_fill.assign(**{'f50': np.where(df_fill['f50'].isnull(), df_fill['f16']+df_fill['f17'], df_fill['f50'])})
+        df_fill = df_fill.assign(**{'f54': np.where(df_fill['f54'].isnull(), df_fill['f19']+df_fill['f20'], df_fill['f54'])})
 
         return df_fill
 
