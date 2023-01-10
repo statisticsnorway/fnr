@@ -298,7 +298,7 @@ class fnr_class:
         The DataFrame underlying the style object may be retreived using return_selection().data (that is appending the statement 'data')
         """
 
-        # Comment TBA
+        # Make sure that input is a list
         years = fnr_class.__flatten_list([years])
         variables = fnr_class.__flatten_list([variables])
         aggregates = fnr_class.__flatten_list([aggregates])
