@@ -58,7 +58,7 @@ class fnr_class:
             self.__aggregations = {**self.__aggregations, **{'mappings': {}}}
 
         # Run setup method and store data as private DataFrame
-        self.__df_untidy, self.__df = self.__setup_class(self.__year_from, self.__year_to, self.__aggregations)
+        self.__df_untidy, self.__df, self.__agg_dict = self.__setup_class(self.__year_from, self.__year_to, self.__aggregations)
 
     @property
     def year_from(self):
@@ -83,6 +83,10 @@ class fnr_class:
     @property
     def df(self):
         return self.__df
+
+    @property
+    def agg_dict(self):
+        return self.__agg_dict
 
     @regions.setter
     def regions(self, regions):
@@ -113,14 +117,14 @@ class fnr_class:
         # Getting data, concatenating, aggregating etc.
         df = self.__get_years(year_from, year_to).drop('varnr', axis=1)
         df = self.__fill_missing_regions(df)
-        df = self.__set_aggregations_index(df, aggregations)
+        df, agg_dict = self.__set_aggregations_index(df, aggregations)
         df_aggregations = self.__make_aggregations_df(df, aggregations)
         df_aggregations_with_growth = self.__return_df_with_growth(df_aggregations)
         df_aggregations_with_growth_tidy = self.__make_tidy_df(df_aggregations_with_growth)
 
         print('Ready')
 
-        return df_aggregations_with_growth, df_aggregations_with_growth_tidy
+        return df_aggregations_with_growth, df_aggregations_with_growth_tidy, agg_dict
 
     # Method that gets FNR data for a several years and puts them in a DataFrame
     def __get_years(self, year_from, year_to):
@@ -177,12 +181,15 @@ class fnr_class:
         print('Generating aggregations')
 
         df_index = df.copy(deep=True)
+        agg_dict = {}
 
         # Make variables mapping from naering to aggregations in lists
         for aggregation in aggregations.get('lists'):
+            mapping1, mapping2 = self.__make_aggregation_mapping(aggregation)
             df_index = df_index.assign(**{aggregation: df['naering'].map(
-                self.__make_aggregation_mapping(aggregation)
+                mapping1
             )})
+            agg_dict = {**agg_dict, **{aggregation: mapping2}}
 
         # Make variables mapping from naering to aggregations in mappings
         for aggregation in aggregations.get('mappings').keys():
@@ -190,13 +197,17 @@ class fnr_class:
                 {x.lower(): aggregation.lower() for x in aggregations.get('mappings').get(aggregation)}
             )})
 
-        return df_index.set_index(['årgang', 'nr_variabler', *aggregations.get('lists'), *aggregations.get('mappings'), 'naering'])
+        agg_dict = {**agg_dict, **aggregations.get('mappings')}
 
-    # Method that generates mapping from NR-næring to aggregation
+        return df_index.set_index(['årgang', 'nr_variabler', *aggregations.get('lists'), *aggregations.get('mappings'), 'naering']), agg_dict
+
+    # Method that generates mapping from NR-næring to aggregation and the other way around
     def __make_aggregation_mapping(self, aggregation):
         df = pd.read_sas(''.join([self.__catalogue_path, 'naering.sas7bdat']), encoding='iso-8859-1')
+        df = df[(df['naering'].str.startswith('2')) | (df['naering'].str.startswith('8'))]
+        df = df.assign(**{aggregation: df[aggregation].str.lower()})
 
-        return dict(zip(df['naering'].str.lower(), df[aggregation].str.lower()))
+        return dict(zip(df['naering'].str.lower(), df[aggregation].str.lower())), dict(df.groupby(aggregation)['naering'].apply(list))
 
     # Method that returns DataFrame for every aggregate in aggregations
     def __make_aggregations_df(self, df, aggregations):
@@ -261,7 +272,7 @@ class fnr_class:
             # Getting data, concatenating, aggregating etc.
             df = self.__get_years(year, year).drop('varnr', axis=1)
             df = self.__fill_missing_regions(df)
-            df = self.__set_aggregations_index(df, self.__aggregations)
+            df, _ = self.__set_aggregations_index(df, self.__aggregations)
             df_aggregations = self.__make_aggregations_df(df, self.__aggregations)
             df_aggregations = pd.concat([self.__df_untidy[self.__df_untidy.index.get_level_values('nr_variabler') != 'vlp'], df_aggregations])
             df_aggregations_with_growth = self.__return_df_with_growth(df_aggregations)
