@@ -189,6 +189,7 @@ class fnr_class:
             df_index = df_index.assign(**{aggregation: df['naering'].map(
                 mapping1
             )})
+
             agg_dict = {**agg_dict, **{aggregation: mapping2}}
 
         # Make variables mapping from naering to aggregations in mappings
