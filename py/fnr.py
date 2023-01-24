@@ -393,7 +393,7 @@ class fnr_class:
         # Sort data by chosen variable or list of variables, if requested
         if 'sort_by' in kwargs.keys():
             try:
-                df = df.sort_values(kwargs.get('sort_by'))
+                df = df.sort_values(kwargs.get('sort_by'), ascending=False)
             except KeyError:
                 raise KeyError('Cannot sort by {}.'
                                'Check that variables exist and are not in wide_by'
