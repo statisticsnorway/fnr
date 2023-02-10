@@ -43,61 +43,61 @@ class fnr_class:
             raise IOError('Path {} does not exist'.format(catalogue_path))
 
         # Set up instance variables
-        self.__year_from = from_year
-        self.__year_to = to_year
-        self.__aggregations = aggregations
-        self.__regions = [x.lower() for x in regions if x.lower() != 'hele_landet']
-        self.__data_path = data_path
-        self.__catalogue_path = catalogue_path
-        self.__variables = VARIABLES
+        self._year_from = from_year
+        self._year_to = to_year
+        self._aggregations = aggregations
+        self._regions = [x.lower() for x in regions if x.lower() != 'hele_landet']
+        self._data_path = data_path
+        self._catalogue_path = catalogue_path
+        self._variables = VARIABLES
 
         # Fill in empty lists and dicts if not supplied by user
-        if self.__aggregations.get('lists') is None:
-            self.__aggregations = {**self.__aggregations, **{'lists': []}}
-        if self.__aggregations.get('mappings') is None:
-            self.__aggregations = {**self.__aggregations, **{'mappings': {}}}
+        if self._aggregations.get('lists') is None:
+            self._aggregations = {**self._aggregations, **{'lists': []}}
+        if self._aggregations.get('mappings') is None:
+            self._aggregations = {**self._aggregations, **{'mappings': {}}}
 
         # Run setup method and store data as private DataFrame
-        self.__df_untidy, self.__df, self.__agg_dict = self.__setup_class(self.__year_from, self.__year_to, self.__aggregations)
+        self._df_untidy, self._df, self._agg_dict = self._setup_class(self._year_from, self._year_to, self._aggregations)
 
     @property
     def year_from(self):
-        return self.__year_from
+        return self._year_from
 
     @property
     def year_to(self):
-        return self.__year_to
+        return self._year_to
 
     @property
     def regions(self):
-        return self.__regions
+        return self._regions
 
     @property
     def data_path(self):
-        return self.__data_path
+        return self._data_path
 
     @property
     def catalogue_path(self):
-        return self.__catalogue_path
+        return self._catalogue_path
 
     @property
     def df(self):
-        return self.__df
+        return self._df
 
     @property
     def agg_dict(self):
-        return self.__agg_dict
+        return self._agg_dict
 
     @regions.setter
     def regions(self, regions):
-        self.__regions = regions
+        self._regions = regions
 
     @data_path.setter
     def data_path(self, path):
         if isinstance(path, str) is False:
             raise IOError('Path must be string')
         if os.path.exists(path):
-            self.__data_path = path
+            self._data_path = path
         else:
             raise IOError('Path {} does not exist'.format(path))
 
@@ -106,34 +106,34 @@ class fnr_class:
         if isinstance(path, str) is False:
             raise IOError('Path must be string')
         if os.path.exists(path):
-            self.__data_path = path
+            self._data_path = path
         else:
             raise IOError('Path {} does not exist'.format(path))
 
     # Method that returns all FNR data in one DataFrame in tidy format (long)
-    def __setup_class(self, year_from, year_to, aggregations):
+    def _setup_class(self, year_from, year_to, aggregations):
         print('Setting up class instance')
 
         # Getting data, concatenating, aggregating etc.
-        df = self.__get_years(year_from, year_to).drop('varnr', axis=1)
-        df = self.__fill_missing_regions(df)
-        df, agg_dict = self.__set_aggregations_index(df, aggregations)
-        df_aggregations = self.__make_aggregations_df(df, aggregations)
-        df_aggregations_with_growth = self.__return_df_with_growth(df_aggregations)
-        df_aggregations_with_growth_tidy = self.__make_tidy_df(df_aggregations_with_growth)
+        df = self._get_years(year_from, year_to).drop('varnr', axis=1)
+        df = self._fill_missing_regions(df)
+        df, agg_dict = self._set_aggregations_index(df, aggregations)
+        df_aggregations = self._make_aggregations_df(df, aggregations)
+        df_aggregations_with_growth = self._return_df_with_growth(df_aggregations)
+        df_aggregations_with_growth_tidy = self._make_tidy_df(df_aggregations_with_growth)
 
         print('Ready')
 
         return df_aggregations_with_growth, df_aggregations_with_growth_tidy, agg_dict
 
     # Method that gets FNR data for a several years and puts them in a DataFrame
-    def __get_years(self, year_from, year_to):
-        print('Reading data from {}\nLoading'.format(self.__data_path), end=' ')
+    def _get_years(self, year_from, year_to):
+        print('Reading data from {}\nLoading'.format(self._data_path), end=' ')
 
         # Store years of data in list of DataFrames
         df_list = []
         for year in range(year_from, year_to+1):
-            df_list.append(self.__get_year(year))
+            df_list.append(self._get_year(year))
 
         print()
 
@@ -148,12 +148,12 @@ class fnr_class:
         return df
 
     # Method that gets FNR data for a single year and puts it in a DataFrame
-    def __get_year(self, year):
+    def _get_year(self, year):
         print(str(year), end=' ')
 
         df_list = []
-        for var in self.__variables:
-            df_list.append(pd.read_sas(''.join([self.__data_path, '_'.join(['fylke', var, str(year)]), '.sas7bdat']), encoding='iso-8859-1'))
+        for var in self._variables:
+            df_list.append(pd.read_sas(''.join([self._data_path, '_'.join(['fylke', var, str(year)]), '.sas7bdat']), encoding='iso-8859-1'))
 
         df = pd.concat(df_list)
         df = df.assign(**{'årgang': pd.Period(value=year, freq='A')})
@@ -161,9 +161,9 @@ class fnr_class:
         return df
 
     # Method that returns a DataFrame where regions are filled in according to region reform of 2018 and 2020
-    def __fill_missing_regions(self, df):
+    def _fill_missing_regions(self, df):
         # Make sure DataFrame has all regions by
-        df_fill = pd.concat([df.copy(deep=True), pd.DataFrame(columns=['hele_landet']+self.__regions, dtype=np.float64)])
+        df_fill = pd.concat([df.copy(deep=True), pd.DataFrame(columns=['hele_landet']+self._regions, dtype=np.float64)])
 
         # Fill in regions according to regional reform of 2018 and 2020
         df_fill = df_fill.assign(**{'f30': np.where(df_fill['f30'].isnull(), df_fill['f01']+df_fill['f02']+df_fill['f06'], df_fill['f30'])})
@@ -177,7 +177,7 @@ class fnr_class:
         return df_fill
 
     # Method that returns a DataFrame with MultiIndex
-    def __set_aggregations_index(self, df, aggregations):
+    def _set_aggregations_index(self, df, aggregations):
         print('Generating aggregations')
 
         df_index = df.copy(deep=True)
@@ -185,7 +185,7 @@ class fnr_class:
 
         # Make variables mapping from naering to aggregations in lists
         for aggregation in aggregations.get('lists'):
-            mapping1, mapping2 = self.__make_aggregation_mapping(aggregation)
+            mapping1, mapping2 = self._make_aggregation_mapping(aggregation)
             df_index = df_index.assign(**{aggregation: df['naering'].map(
                 mapping1
             )})
@@ -203,15 +203,15 @@ class fnr_class:
         return df_index.set_index(['årgang', 'nr_variabler', *aggregations.get('lists'), *aggregations.get('mappings'), 'naering']), agg_dict
 
     # Method that generates mapping from NR-næring to aggregation and the other way around
-    def __make_aggregation_mapping(self, aggregation):
-        df = pd.read_sas(''.join([self.__catalogue_path, 'naering.sas7bdat']), encoding='iso-8859-1')
+    def _make_aggregation_mapping(self, aggregation):
+        df = pd.read_sas(''.join([self._catalogue_path, 'naering.sas7bdat']), encoding='iso-8859-1')
         df = df[(df['naering'].str.startswith('2')) | (df['naering'].str.startswith('8'))]
         df = df.assign(**{aggregation: df[aggregation].str.lower()})
 
         return dict(zip(df['naering'].str.lower(), df[aggregation].str.lower())), dict(df.groupby(aggregation)['naering'].apply(list))
 
     # Method that returns DataFrame for every aggregate in aggregations
-    def __make_aggregations_df(self, df, aggregations):
+    def _make_aggregations_df(self, df, aggregations):
         print('Generating aggregated DataFrame')
 
         df_list = []
@@ -219,7 +219,7 @@ class fnr_class:
                             *aggregations.get('lists'),
                             *aggregations.get('mappings').keys()]:
             df_list.append(
-                            self.__return_aggregation_df(df, aggregation)
+                            self._return_aggregation_df(df, aggregation)
                             .reset_index()
                             .rename(columns={aggregation: 'aggregat'})
                             .set_index(['årgang', 'nr_variabler',
@@ -229,7 +229,7 @@ class fnr_class:
         return pd.concat(df_list)
 
     # Method that returns DataFrame aggregated according to aggregation
-    def __return_aggregation_df(self, df, aggregation):
+    def _return_aggregation_df(self, df, aggregation):
         df_aggregation = df.groupby(['årgang', 'nr_variabler', aggregation], dropna=False).sum(min_count=1)
         df_aggregation = df_aggregation.assign(**{'aggregering': aggregation.lower()})
         df_aggregation = df_aggregation[df_aggregation.index.get_level_values(aggregation).isnull() == False]
@@ -237,7 +237,7 @@ class fnr_class:
         return df_aggregation
 
     # Method that returns DataFrame with volume growth rates
-    def __return_df_with_growth(self, df):
+    def _return_df_with_growth(self, df):
         print('Generating volume growth')
 
         df_vr = df[df.index.get_level_values('nr_variabler') == 'bnp'].droplevel('nr_variabler').sort_index()
@@ -253,7 +253,7 @@ class fnr_class:
         return pd.concat([df, df_vl.reset_index().set_index(['årgang', 'nr_variabler', 'aggregering', 'aggregat'])])
 
     # Method that takes wide DataFrame and transposes it to long (tidy format)
-    def __make_tidy_df(self, df):
+    def _make_tidy_df(self, df):
         df_tidy = (
             df
             .reset_index()
@@ -269,20 +269,20 @@ class fnr_class:
     def add_year(self, year):
         print('Adding year to class instance')
 
-        if year == self.__year_to+1:
+        if year == self._year_to+1:
             # Getting data, concatenating, aggregating etc.
-            df = self.__get_years(year, year).drop('varnr', axis=1)
-            df = self.__fill_missing_regions(df)
-            df, _ = self.__set_aggregations_index(df, self.__aggregations)
-            df_aggregations = self.__make_aggregations_df(df, self.__aggregations)
-            df_aggregations = pd.concat([self.__df_untidy[self.__df_untidy.index.get_level_values('nr_variabler') != 'vlp'], df_aggregations])
-            df_aggregations_with_growth = self.__return_df_with_growth(df_aggregations)
+            df = self._get_years(year, year).drop('varnr', axis=1)
+            df = self._fill_missing_regions(df)
+            df, _ = self._set_aggregations_index(df, self._aggregations)
+            df_aggregations = self._make_aggregations_df(df, self._aggregations)
+            df_aggregations = pd.concat([self._df_untidy[self._df_untidy.index.get_level_values('nr_variabler') != 'vlp'], df_aggregations])
+            df_aggregations_with_growth = self._return_df_with_growth(df_aggregations)
             df_aggregations_with_growth = df_aggregations_with_growth[df_aggregations_with_growth.index.get_level_values('årgang').year == year]
-            df_aggregations_with_growth_tidy = self.__make_tidy_df(df_aggregations_with_growth)
+            df_aggregations_with_growth_tidy = self._make_tidy_df(df_aggregations_with_growth)
 
             # Storing new data to DataFrame and updating to_year
-            self.__df = pd.concat([self.__df, df_aggregations_with_growth_tidy])
-            self.__year_to = year
+            self._df = pd.concat([self._df, df_aggregations_with_growth_tidy])
+            self._year_to = year
 
             print('Ready')
         else:
@@ -311,15 +311,15 @@ class fnr_class:
         """
 
         # Make sure that input is a list
-        years = fnr_class.__flatten_list([years])
-        variables = fnr_class.__flatten_list([variables])
-        aggregates = fnr_class.__flatten_list([aggregates])
-        regions = fnr_class.__flatten_list([regions])
+        years = fnr_class._flatten_list([years])
+        variables = fnr_class._flatten_list([variables])
+        aggregates = fnr_class._flatten_list([aggregates])
+        regions = fnr_class._flatten_list([regions])
 
         # Select all if years, aggregates or regions is None or empty list
         if years in ([None], []):
             years = (
-                self.__df
+                self._df
                 .index
                 .get_level_values('årgang')
                 .year
@@ -328,7 +328,7 @@ class fnr_class:
             )
         if variables in ([None], []):
             variables = (
-                self.__df
+                self._df
                 .index
                 .get_level_values('nr_variabler')
                 .unique()
@@ -336,7 +336,7 @@ class fnr_class:
             )
         if aggregates in ([None], []):
             aggregates = (
-                self.__df[self.df.index.get_level_values('aggregering') == aggregation]
+                self._df[self.df.index.get_level_values('aggregering') == aggregation]
                 .index
                 .get_level_values('aggregat')
                 .unique()
@@ -344,7 +344,7 @@ class fnr_class:
             )
         if regions in ([None], []):
             regions = ['hele_landet']+(
-                self.__df
+                self._df
                 .index
                 .get_level_values('fylke')
                 .unique()
@@ -353,18 +353,18 @@ class fnr_class:
 
         # Make condition for selection and DataFrame thats satisfies condition
         condition = (
-            (self.__df.index.get_level_values('årgang').year.isin(years)) &
-            (self.__df.index.get_level_values('nr_variabler').isin([x.lower() for x in variables])) &
-            (self.__df.index.get_level_values('aggregering') == aggregation.lower()) &
-            (self.__df.index.get_level_values('aggregat').isin([x.lower() for x in aggregates])) & 
-            (self.__df.index.get_level_values('fylke').isin([x.lower() for x in regions]))
+            (self._df.index.get_level_values('årgang').year.isin(years)) &
+            (self._df.index.get_level_values('nr_variabler').isin([x.lower() for x in variables])) &
+            (self._df.index.get_level_values('aggregering') == aggregation.lower()) &
+            (self._df.index.get_level_values('aggregat').isin([x.lower() for x in aggregates])) & 
+            (self._df.index.get_level_values('fylke').isin([x.lower() for x in regions]))
         )
 
         # Suppress data (set to NaN) if chosen by user
         if kwargs.get('suppress') is True:
-            df = self.__df.assign(**{'verdi': lambda df: [x if y is False else np.nan for x, y in zip(df['verdi'], df['prikke'])]})[['verdi']]
+            df = self._df.assign(**{'verdi': lambda df: [x if y is False else np.nan for x, y in zip(df['verdi'], df['prikke'])]})[['verdi']]
         else:
-            df = self.__df[['verdi']]
+            df = self._df[['verdi']]
 
         # Return first differences if chosen by user
         if kwargs.get('first_diff') is True:
@@ -414,7 +414,7 @@ class fnr_class:
             * fnr.suppress_data({2019: [['2x90_97', 'f54'], ['2x85', 'f30']], 2020: [['2x90_97', 'f54'], ['2x85', 'f30']]})
         """
 
-        df = self.__df.copy(deep=True)
+        df = self._df.copy(deep=True)
 
         # Loop over keys (years) and lists ([aggreagte, region]) and set 'prikke' to True
         for year in to_be_suppressed.keys():
@@ -426,7 +426,7 @@ class fnr_class:
                     (df['prikke'])
                 )})
 
-        self.__df = df
+        self._df = df
 
     # Method that ...
     def to_statbank():
@@ -434,7 +434,7 @@ class fnr_class:
 
     # Recursive function that flattens arbitrarily nested in_list
     @staticmethod
-    def __flatten_list(in_list):
+    def _flatten_list(in_list):
         if (isinstance(in_list, list) or isinstance(in_list, tuple)) is False:
             raise ValueError('Input must be list')
 
@@ -442,7 +442,7 @@ class fnr_class:
         for x in in_list:
             inner_list = []
             if isinstance(x, list) or isinstance(x, tuple):
-                inner_list.extend(fnr_class.__flatten_list(x))
+                inner_list.extend(fnr_class._flatten_list(x))
             else:
                 inner_list.append(x)
             outer_list.extend(inner_list)
