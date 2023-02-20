@@ -245,7 +245,7 @@ def plott_naering2(df, agg_dict, fnr):
         if regionsreform == '2020-':
             return ['f30', 'f03', 'f34', 'f38', 'f42', 'f11', 'f46', 'f15', 'f50', 'f18', 'f54', 'f21', 'f23']
 
-    aargang_wgt = IntRangeSlider(value=[aargang_min, aargang_max], min=aargang_min, max=aargang_max)
+    aargang_wgt = IntRangeSlider(value=[aargang_max-1, aargang_max], min=aargang_min, max=aargang_max)
     variabel_wgt = Dropdown(options=variabler, description='Variabel', style={'description_width': '3cm'})
     aggregering_wgt = Dropdown(options=aggregeringer, value=aggregeringer[1], description = 'Aggregering', style={'description_width': '3cm'})
     aggregat_wgt = SelectMultiple(options=lag_aggregater(variabler[0], aggregeringer[1]), value=lag_aggregater(variabler[0], aggregeringer[1]), description = 'Aggregat', style={'description_width': '3cm'}, rows=10)
